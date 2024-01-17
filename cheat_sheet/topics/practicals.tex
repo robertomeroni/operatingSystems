@@ -1,0 +1,389 @@
+\section{Memcached}
+\begin{itemize}
+  \item In-memory key-value store for small arbitrary data (strings, objects) from results of database calls, API calls, or page rendering.
+  \item It is a client-server model
+  \begin{itemize}
+    \item Client knows how to access the servers
+    \item Servers store the values
+    \item No communication between servers (Client-server only)
+  \item  LRU cache (Values expire after a specified amount of time)
+  \end{itemize}
+  \item Consistent Hashing for keys (Model that allows for more stable distribution of keys given addition or removal of servers)
+  \item Under the hood, it uses a slab allocator
+\item Memcached memory $\rightarrow$ 1MiB/page
+\item Pages associated with slab classes
+\item Slab class $\rightarrow$ Fixed-sized chunks
+\item \#chunks/slab class == \#pages/sizeof(slab class)
+\end{itemize}
+
+
+
+\section{Redis}
+\begin{itemize}
+\item primary based remote-write protocol.
+  \item Master/replicas replication is Asynchronous,
+ Non-blocking
+
+  \item Allow writes only with \(N\) attached replicas
+  \item Redis expires allow keys to have a limited time to live.
+  \end{itemize}
+All write operations are centralized in a primary replica (always the same). Primary replica is in charge of coordinating write operations to the data item. In Redis, write operations on a different replica than the primary are disabled (therefore all of them are local and the forwarding to the primary is never needed). Write Requests from clients at primary replicas are acknowledged and propagated in the background to remaining replicas.
+\subsection{commands}
+\begin{itemize}
+    \item Start master using default port (6379):\\
+masterIP\$ src/redis-server 
+\item Start 1 replicas at node1IP\$: \\
+node1IP\$ src/redis-server --replica-of masterIP 6379 
+\item min-replicas-to-write
+\item ./src/redis-cli -p port\$ get/set/del key
+\item sentinel monitor name\$ ip\$ port\$ quorum\$
+\end{itemize}
+
+\section{CouchDB}
+\begin{itemize}
+  \item Document-based database
+  \item Fault-tolerant
+  \item Easy scaling up/down
+  \item Incremental replication
+  \item Eventual consistency
+\end{itemize}
+Cluster configuration:
+  \begin{itemize}
+    \item Q: Number of shards
+    \begin{itemize}
+      \item Shard $\sim$ part of database ($\rightarrow$ 4 shards == 4 nodes)
+    \end{itemize}
+    \item N: Number of replicas (copies of every document)
+    \item R: Number of copies of a document with the same revision to be read before returning it
+    \item W: Number of nodes needed to save the document
+  \end{itemize}
+
+
+\section{MongoDB}
+\begin{itemize}
+  \item MongoDB is a document database that provides high performance, high availability, and automatic scaling.
+  \item Document-based database
+  \item Fault-tolerant
+  \item Easy scaling up/down
+  \item Incremental replication
+  \item Eventual consistency
+\end{itemize}
+
+\section{IBM General Parallel File System}
+\begin{itemize}
+  \item High-performance clustered file system
+  \item Posix Compliant
+  \item Directory + Metadata distributed across the file system
+  \item File split in blocks of 1MiB
+  \item No replication
+  \item Tolerates network partitions (The largest partition remains live)
+  \item Used in HPC
+\end{itemize}
+
+\section{Dropbox}
+Dropbox keeps a desktop folder synchronized with a server in the cloud.
+The main components are:
+\begin{itemize}
+  \item Block Server - To store blocks from files in Amazon S3
+  \item MetaData Server - To store info about files in a DB
+  \item Notification Server - To notify clients about new changes and avoid polling.
+\end{itemize}
+Due to the high number of requests, all these components must be replicated (notification server,
+metadata server, block server) and different load balancers are used to distribute the load against
+the available servers.
+Additionally, to avoid the access to the parallel DB for the metadata it is kept in memory
+through an in-memory database: 'memcached'.
+The clients access the metadata servers through the load balancers, who consult the in-memory
+metadata of memcached, and allows direct access to the block server with the data in amazon.
+Any change in the metadata/block is notified to the notification server who is responsible to
+forward the notification to the different clients.
+
+\section{Google File System}
+A distributed file system developed by Google to provide efficient, reliable access to data using large clusters of commodity hardware.
+\begin{itemize}
+  \item Fault tolerance: "Failure is the norm, not the exception"
+  \item Files are huge
+  \item Most files appended, not overwritten
+  \item Read over write ratio (Very High!)
+\end{itemize}
+\begin{itemize}
+  \item GFS does not have a standard OS-layer API
+  \begin{itemize}
+    \item NO Posix API
+    \item No kernel/vfs for accessing files
+    \item User-level API to access files
+    \item GFS servers are implemented in user space using native Linux FS
+  \end{itemize}
+  \item Files organized in directories
+  \item Operations:
+  \begin{itemize}
+    \item Basic: Create, delete, open, close, read, write
+    \item Additional: Snapshot \& append
+  \end{itemize}
+\end{itemize}
+
+\subsection{Chunkservers}
+\begin{itemize}
+  \item Chunk size = 64 MB (default)
+  \begin{itemize}
+    \item Chunkserver stores a 32-bit checksum with each chunk
+    \begin{itemize}
+      \item In memory \& logged to disk: allows it to detect data corruption
+    \end{itemize}
+  \end{itemize}
+  \item Chunk Handle
+  \begin{itemize}
+    \item Globally unique 64-bit number
+    \item Assigned by the master when the chunk is created
+  \end{itemize}
+  \item Each chunk is replicated on multiple chunkservers
+  \begin{itemize}
+    \item Three replicas (different levels can be specified)
+    \item Popular files may need more replicas to avoid hotspots
+  \end{itemize}
+\end{itemize}
+
+\subsection{One master}
+\begin{itemize}
+  \item Maintains all file system metadata in memory
+  \begin{itemize}
+    \item Namespace
+    \item Access control info
+    \item Filename to chunks mappings
+    \item Current locations of chunks
+  \end{itemize}
+  \item Manages
+  \begin{itemize}
+    \item Chunk leases (locks)
+    \item Garbage collection (freeing unused chunks)
+    \item Chunk migration (copying/moving chunks)
+  \end{itemize}
+  \item Master replicates its data for fault tolerance
+  \item Periodically communicates with all chunkservers
+  \begin{itemize}
+    \item Via heartbeat messages
+    \item To get state and send commands
+  \end{itemize}
+\end{itemize}
+
+\subsection{Client}
+\begin{itemize}
+  \item Clients connect directly with chunkservers
+  \item No data caching at server/client
+  \item Clients cache metadata
+\end{itemize}
+\subsubsection{Reading files}
+\begin{enumerate}
+  \item Contact the master
+  \item Get the list of chunk handles (and files metadata)
+  \item Get the location of each of the chunk handles (replicated info)
+  \item Contact ANY available chunkserver
+\end{enumerate}
+\subsubsection{Writing to file}
+\paragraph{Control phase (send but don't write)}
+    \begin{enumerate}
+  \item A client is given a list of replicas
+  \item Client writes to closest replica
+    \begin{itemize}
+      \item Replica forwards data to another replica
+      \item That replica forwards to another chunkserver
+    \end{itemize}
+  \item Chunkservers store this data in a cache
+\end{enumerate}
+\paragraph{Data phase (write)}
+\begin{enumerate}
+  \item Client waits for replicas to acknowledge receiving data.
+  \item Send a write request to the primary
+  \item The primary is responsible for serialization of writes (assigns consecutive serial numbers to all writes)  
+  \item Once all acks have been received, the primary acknowledges the client
+\end{enumerate}
+
+
+
+
+\section{Hadoop File System: Storage system}
+\begin{itemize}
+  \item Run on commodity hardware
+  \item Fault-tolerant
+  \item High throughput vs low latency
+  \item No Posix Compliant
+  \item Support large data sets
+  \begin{itemize}
+    \item File size of GB – TB \& 100s servers
+  \end{itemize}
+  \item Write-once-read-many access model for files
+  \item A file´s content need not be changed
+  \begin{itemize}
+    \item Except for appends and truncates
+  \end{itemize}
+  \item Suitable for MapReduce apps or web crawlers
+  \item Simplifies data coherency \& enables high throughput
+\end{itemize}
+
+
+\begin{itemize}
+  \item NameNode server
+  \begin{itemize}
+    
+    \item Manages the file system namespace
+    \item Stores informations about files (names, attributes)
+    \item Regulates access to files by clients
+  \end{itemize}
+  \item N DataNodes
+\end{itemize}
+\subsection{NameNode}
+\begin{itemize}
+  \item Manages FS namespace operations:
+  \begin{itemize}
+    \item Open, close
+    \item Renaming files \& directories
+    \item Mapping of blocks to DataNodes
+  \end{itemize}
+  \item Heartbeat and Blockreport from DataNodes
+  \begin{itemize}
+    \item Detect malfunctions
+    \item List of all blocks on a DataNode
+  \end{itemize}
+\end{itemize}
+
+\subsection{DataNodes}
+Manage storage attached to the node
+
+\begin{itemize}
+  \item Serving Read \& Write requests from File Syatem's clients
+  \item Block creation, deletion \& replication (when requested from NameNode)
+  \item Store blocks' files in the local file system (configurable block size, default 128Mb)
+  \item Blocks are replicated, \#replicas per file is configurable
+  \end{itemize}
+
+\subsection{Replicas}
+Replica placement (Rack-Aware):
+\begin{itemize}
+    \item 2 in different nodes in local rack
+    \item 1 in different rack
+    \item remaining in random places keeping replicas/rack below a threshold
+\end{itemize}
+Replica selection:
+\begin{itemize}
+    \item Client sends request to NameNode, receives list of blocks and replica DataNodes per block
+    \item Client tries to read from the closest replica
+\end{itemize}
+\subsection{commands}
+\begin{itemize}
+\item start server: sbin/start-dfs.sh
+    \item check up services: jps
+     \item bin/hdfs dfs -copyFromLocal <local file path>  <dest(present on hdfs)>
+    \item set $n$ replicas: dfs.replication=$n$
+    \item modify block size: dfs.blocksize
+  \item \texttt{hadoop jar jar\_file main\_class input\_path output\_path:} Runs a Hadoop MapReduce job.
+  \item \texttt{mapred job -list:} Lists MapReduce jobs.
+\end{itemize}
+
+\section{Cassandra: a distributed key-value store}
+\begin{itemize}
+\item Cassandra follows a Replicated-write quorum-based protocol.
+
+  \item A peer-to-peer distributed system across homogeneous nodes where data is distributed among all nodes in the cluster
+  \item Main elements:
+  \begin{itemize}
+    \item Node: where you store your data
+    \item Datacenter: collection of nodes
+    \begin{itemize}
+      \item Granularity used by replication
+      \item Different workload $\rightarrow$ use separate datacenters
+      \item Datacenters must never span physical locations
+    \end{itemize}
+    \item Cluster: 1 or more datacenters
+    \item Cassandra is aware of network topology
+  \end{itemize}
+\end{itemize}
+
+\begin{itemize}
+  \item Node: where you store your data
+  \item Datacenter: collection of nodes
+  \begin{itemize}
+    \item Granularity used by replication
+    \item Different workload $\rightarrow$ use separate datacenters
+    \item Datacenters must never span physical locations
+  \end{itemize}
+  \item Cluster: 1 or more datacenters
+\end{itemize}
+\subsection{Consistent Hashing}
+\begin{itemize}
+  \item Distribute data across a cluster to minimize reorganization when nodes are added or removed.
+  \item Use a consistent keyspace $\rightarrow$ a ring
+  \item Data has a partition key
+  \item Each partition key $\rightarrow$ a hash value into ring
+  \item Each node in the cluster $\rightarrow$ range of data based on hash value
+  \item Adding or removing a node $\rightarrow$ Redistribute the data in the interval
+  \item Cassandra places data on each node according to the partition key and the range that the node is responsible for.
+\end{itemize}
+\subsection{How does Cassandra work}
+\begin{itemize}
+  \item Client read or write requests can be sent to any node in the cluster.
+  \item When a client connects to a node with a request, that node serves as the coordinator for that particular client operation.
+  \item Coordinator acts as a proxy between client application and nodes that own the data being requested.
+  \item Coordinator determines which nodes in the ring should get the request based on how the cluster is configured.
+\end{itemize}
+\subsection{Writing Data}
+\begin{itemize}
+  \item Coordinator sends write request to all replicas.
+  \item Write consistency level determines how many replica nodes must respond with a success acknowledgment for the write to be considered successful.
+  \item Success means that the data was written to the commit log and the memtable.
+\end{itemize}
+\begin{itemize}
+  \item A sequentially written commit log on each node captures write activity to ensure data durability.
+  \item Data is then indexed and written to an in-memory structure, called a memtable.
+  \item Each time the memory structure is full, the data is written to disk in an SSTable data file.
+  \item All writes are automatically partitioned and replicated throughout the cluster.
+\end{itemize}
+\subsection{Data Replication}
+\begin{itemize}
+  \item Replication factor: total number of replicas across the cluster
+  \begin{itemize}
+    \item 1 $\rightarrow$ only one copy of each row in the cluster
+    \item 2 $\rightarrow$ 2 copies of each row, each copy on a different node.
+  \end{itemize}
+  \item Replica placement
+  \begin{itemize}
+    \item Partitioner: determines which node will receive the first replica of a piece of data, and how to distribute other replicas across other nodes in the cluster (The hash function)
+    \item Replica placement strategy: determines which nodes to place replicas on.
+    \begin{itemize}
+      \item SimpleStrategy: Single datacenter and 1 rack.
+      \item NetworkTopologyStrategy: Remaining cases.
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+\subsection{Consistency models}
+ Fully configurable consistency on: cluster, datacenter or individual read or write operation
+\begin{itemize}
+  \item By default: ONE for all read \& write ops
+  \item QUORUM = $\left(\frac{\text{SumReplicationFactors}}{2}\right) + 1$
+\end{itemize}
+
+\subsubsection{write consistency models}
+\begin{itemize}
+  \item ALL: ...all replica nodes in the cluster for that partition
+  \item QUORUM: ...a quorum of replica nodes in...
+    \begin{itemize}
+        \item EACH\_QUORUM: EACH datacenter.
+        \item QUORUM: ALL datacenter.
+        \item LOCAL\_QUORUM: SAME datacenter as coordinator
+    \end{itemize}
+  \item ONE: ... at least one replica node
+  \item TWO: ...at least two replica nodes
+  \item LOCAL\_ONE: ... at least one replica node in the same datacenter
+  \item ANY: ... at least one node (note the missing "replica" part!)
+\end{itemize}
+\subsubsection{read consistency model}
+same as writing, except for EACH\_QUORUM and ANY
+\subsection{commands}
+\begin{itemize}
+ \item \texttt{nodetool status:} Displays node status and cluster info.
+  \item \texttt{nodetool ring:} Visualizes data distribution across nodes.
+  \item \texttt{cqlsh:} Starts CQL shell for commands.
+  \item \texttt{DESCRIBE KEYSPACES;} Lists all keyspaces.
+  \item \texttt{USE keyspace\_name;} Switches to a keyspace.
+  \item \texttt{DESCRIBE TABLE table\_name;} Shows table structure.
+  \item \texttt{INSERT INTO table\_name ...;} Inserts data.
+\end{itemize}

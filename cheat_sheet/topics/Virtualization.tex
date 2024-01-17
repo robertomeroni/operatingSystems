@@ -1,0 +1,79 @@
+\section{Memory Virtualization}
+\begin{itemize}
+    \item Page Table: from host Virtual memory to host Physical memory.
+    \item Shadow Page: from host Virtual memory to guest Physical memory.
+\end{itemize}
+
+
+\section{Borrowed Virtual Time}
+\begin{itemize}
+\item For each \(vCPU_i\), track its virtual time (\(A_i\)):
+\(A_i += \text{RealRunningTime} \times m_i\)
+\begin{itemize}
+  \item Real running time measured in multiples of the minimum charging unit (\text{mcu}), typically the timer interrupt period.
+  \item \(m_i\) is set proportional to \(\frac{1}{w_i}\) (with \(w_i\) being the weight of \(vCPU_i\)), and normalized to be an integer.
+\end{itemize}
+
+\item Switch from \(i\) to \(j\) if \(A_j \leq A_i - C \times m_i\):
+\begin{itemize}
+  \item \(C\) is the context switch allowance.
+\end{itemize}
+
+Real time by which the current \(vCPU\) is allowed to go beyond another runnable \(vCPU\) (it is a multiple of the \(mcu\))
+\begin{itemize}
+  \item Check only \(A_j \leq A_i\) (\(C\) is ignored) if \(j\) just became runnable after sleep to avoid affecting response time.
+\end{itemize}
+\end{itemize}
+
+
+\section{Pre-Copy VM migration}
+\begin{enumerate}
+  \item Pre-migration + reservation
+  \begin{itemize}
+    \item Determine migrating VM
+    \item Determine destination host
+    \item Initialize a VM on the target host
+  \end{itemize}
+  
+  \item Memory push (iterative pre-copy)
+  \begin{itemize}
+    \item Transfer all memory pages
+    \item Copy dirty memory pages in successive rounds
+    \item Repeat until the number of dirty pages is smaller than a threshold
+  \end{itemize}
+  
+  \item Stop and copy
+  \begin{itemize}
+    \item Suspend VM on the source host
+    \item Network connection is redirected to the new VM
+    \item Transfer the remaining dirty pages
+    \item Transfer VCPU and network states
+  \end{itemize}
+  
+  \item Commitment + activation
+  \begin{itemize}
+    \item VM reloads state and resumes its execution on the destination host
+    \item Remove original VM from source 
+  \end{itemize}
+\end{enumerate}
+
+\section{Post-Copy VM migration}
+\begin{enumerate}
+  \item Pre-migration+reservation is the same
+  \item Stop and copy
+  \begin{itemize}
+    \item Suspend VM and transfer minimal execution state
+  \end{itemize}
+  
+  \item Activation: resume VM at destination 
+  
+  \item Running VM
+  \begin{itemize}
+    \item During the execution of the VM, its memory pages are pushed from the source host
+    \begin{itemize}
+      \item If VM accesses a not yet received page, it is faulted in from the source over the network (remote page fault)
+    \end{itemize}
+    \item Remove the original VM from the source host when all the pages have been transferred
+  \end{itemize}
+\end{enumerate}
+

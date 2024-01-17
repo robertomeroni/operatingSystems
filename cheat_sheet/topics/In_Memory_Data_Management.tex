@@ -1,0 +1,53 @@
+\section{Primary Backup protocols}
+\subsection{remote-write}
+\begin{itemize}
+    \item All writes are done at a fixed single replica
+    \item Reads can be carried out locally
+\end{itemize}
+\begin{itemize}
+    \item sequential consistency: Primary send all writes to each replica in the same order via total+FIFO-order atomic multicast
+    \item Implements strong consistency if read requests are also forwarded to the primary
+\end{itemize}
+\subsection{local-write}
+Primary migrates to the replica that is writing, successive writes are carried out locally, and then the replicas are updated using a non-blocking protocol
+\section{Replicated-write protocols}
+\subsection{Active Replication}
+\begin{itemize}
+  \item Each operation is forwarded to all replicas
+  \begin{itemize}
+    \item Each replica has a process to carry out operations
+  \end{itemize}
+  \item Operations need to be carried out in the same order everywhere
+  \begin{itemize}
+    \item Client uses total+FIFO-ordered multicast to send operation to the group of replicas
+    \item Total+FIFO-ordered multicast ensures:
+    \begin{itemize}
+      \item Sequential consistency if we multicast only writes, and
+      \item Strong consistency if we multicast also reads
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+\section{Quorum-based Protocols}
+Writes are serialized and reads return the latest version that was written $\implies$ Strong Consistency
+
+\section{Block vs Object File System}
+
+Block storage device:
+  \begin{itemize}
+    \item Data stored in fixed-size blocks
+    \item Identified by a positive integer starting from 0
+    \item LBN used for data retrieval
+    \item Block-based file system $\rightarrow$ store files
+  \end{itemize}
+  Object storage device:
+  \begin{itemize}
+    \item Data is a single object
+      \item Key \& Value
+      \item Key $\rightarrow$ Positive integer (64 bits)
+      \item Value $\rightarrow$ Arbitrary size
+      \item Attributes
+    \item Object-based file system $\rightarrow$ store files
+  \end{itemize}
+
+

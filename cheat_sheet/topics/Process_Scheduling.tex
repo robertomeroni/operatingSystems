@@ -1,0 +1,47 @@
+\section{Job Scheduling}
+\begin{enumerate}
+    \item Sort job queue
+    \item Reserve a order
+    \item Try to backfill
+    \item when reserved order ends,loop from 1
+\end{enumerate}
+(the first one in the sorted queue starts immediately, no reservation) \\
+conditions for backfilling:
+\begin{enumerate}
+  \item It will terminate by the shadow time, OR
+  \begin{itemize}
+    \item 'Shadow time' refers to the expected start time of the first queued job
+  \end{itemize}
+
+  \item It needs at most extra PEs
+  \begin{itemize}
+    \item 'Extra PEs' refers to the number of available PEs when the first queued job starts running
+  \end{itemize}
+  \end{enumerate}
+  \subsection{Backfilling variations}
+  \begin{itemize}
+  \item Order of queued jobs:
+FCFS (EASY backfilling), priorities (slack-based backfilling), shortest estimated runtime first (SJF backfilling)
+  \item Number of reserved jobs:
+  1 (EASY backfilling), all (conservative backfilling), adaptive (selective backfilling: only reserve jobs whose expected slowdown exceeds a threshold)
+
+\end{itemize}
+\section{Gang Scheduling}
+\begin{enumerate}
+    \item assign order by order (following the policy and the queue order), until a quantum of each job has been assigned
+    \item if there is no repacking, repeat same pattern until all jobs end
+    \item if there is repacking, every time a job terminates re-schedule following queue (but maybe maintaining affinities)
+\end{enumerate}
+
+
+
+\section{Metrics for Job Scheduling}
+
+\begin{itemize}
+  \item Wait Time (\(T_W\))
+  \item Response Time (\(T_W + T_R\))
+  \item Slowdown (\((T_W + T_R)/T_R\))
+  \item Bounded Slowdown \\
+  (\(max\{(T_W+ T_R) / max\{T_R,\tau\}, 1\}\))
+  \item Per-Processor Slowdown (\(slowdown/ \text{number of PE}\))
+\end{itemize}
